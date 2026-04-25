@@ -2,7 +2,7 @@
 
 Small stateless web app for an image question-answering exercise. A user uploads an image, asks a natural-language question about it, and the backend sends both to Gemini and returns the answer.
 
-Current status: Tier 1 and Tier 2 are implemented. The stable `/ask` endpoint remains the Tier 1 MVP path, and `/ask-agentic` adds an optional Agentic Vision mode backed by Gemini 3 Flash Preview with code execution.
+Current status: Tier 1, Tier 2, and a low-risk Tier 3 polish pass are implemented. The stable `/ask` endpoint remains the Tier 1 MVP path, `/ask-agentic` adds optional Agentic Vision, and the UI now includes prompt templates plus request ID visibility for easier testing and debugging.
 
 ## Why This Stack
 
@@ -42,10 +42,11 @@ requirements.txt
 ## Architecture Summary
 
 - `app/main.py` wires the FastAPI app, static file serving, and the HTTP endpoints.
+- `app/main.py` also generates per-request IDs for image analysis requests and logs minimal request metadata.
 - `app/validators.py` handles shared request validation.
 - `app/gemini_service.py` contains both the stable Tier 1 Gemini call and the isolated Tier 2 agentic parser.
 - `app/config.py` centralizes environment-based configuration.
-- `app/static/` contains a single-page frontend that can switch between `/ask` and `/ask-agentic`.
+- `app/static/` contains a single-page frontend that can switch between `/ask` and `/ask-agentic`, apply preset prompts, and display request IDs.
 
 ## Gemini API Setup
 
@@ -120,7 +121,8 @@ python -m uvicorn main:app --reload --port 8010
     ```json
     {
       "answer": "The serial number appears to be AX-2048.",
-      "model": "gemini-2.5-flash"
+      "model": "gemini-2.5-flash",
+      "request_id": "req_8f3c91b2"
     }
     ```
 
@@ -128,7 +130,18 @@ python -m uvicorn main:app --reload --port 8010
   - Optional Tier 2 endpoint.
   - Accepts the same multipart payload as `/ask`.
   - Uses Gemini 3 Flash Preview with Code Execution enabled.
-  - Returns the final answer plus a timeline of any thought summaries, generated Python code, execution output, and intermediate images returned by Gemini.
+  - Returns the final answer plus a timeline of any thought summaries, generated Python code, execution output, intermediate images returned by Gemini, and a request ID.
+
+## Tier 3 Polish
+
+- Prompt templates fill the question box with concise field-operations prompts for:
+  - reading serial numbers
+  - counting visible items
+  - checking PPE or safety gear
+  - inspecting visible damage
+- Each `/ask` and `/ask-agentic` request gets a server-generated request ID in the format `req_<short-id>`.
+- Successful responses include `request_id`, and error responses include it where practical so debugging stays simple without exposing sensitive data.
+- Server logs include only minimal metadata: request ID, endpoint, mode, model, success or failure, and status code.
 
 ## Tier 2 Agentic Vision
 
@@ -154,6 +167,12 @@ Agentic Vision mode:
   - execution output when present
   - intermediate images when Gemini returns them
 
+Tier 3 polish:
+- Click each prompt template button and confirm it fills the question textarea.
+- Submit in normal mode and confirm the answer card shows `Request ID: req_<...>`.
+- Submit in agentic mode and confirm the answer card also shows the request ID.
+- Trigger a validation error and confirm the frontend still shows a clean error message.
+
 ## Running Tests
 
 ```bash
@@ -169,20 +188,22 @@ pytest
 - `MODEL_NAME` controls the stable Tier 1 path.
 - `AGENTIC_MODEL_NAME` controls the Tier 2 agentic path.
 - The health check points at `/health`.
+- Request IDs are generated at runtime and do not require any extra Render configuration.
 
 ## Known Limitations
 
 - MIME type validation is based on the uploaded content type and does not inspect file signatures.
 - The app handles one image and one question at a time.
-- There is no rate limiting, request logging, or analytics yet.
+- There is minimal request logging but no analytics or rate limiting yet.
 - Agentic Vision depends on a preview model and may be less predictable than the Tier 1 path.
 - Not every agentic response will include code, execution output, or images.
 - The app uses Gemini thought summaries and tool output directly rather than a richer custom workflow engine.
+- Streaming and multi-turn chat were intentionally not implemented to keep the exercise stateless, easier to review, and easier to explain in an interview.
 
 ## Future Work
 
 - Add drag-and-drop uploads and a small image preview.
 - Add stronger server-side file validation beyond MIME type headers.
-- Add structured logging for failed Gemini calls in production.
+- Add structured logging export or tracing beyond the current lightweight request ID logging.
 - Add more agentic parsing coverage around unusual Gemini response shapes.
 - Add a clearer deployment checklist after the first public Render deploy.

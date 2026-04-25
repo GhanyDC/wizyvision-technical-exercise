@@ -77,6 +77,44 @@ Use one entry per work session. Keep it honest, short, and specific enough to di
 - Improve timeline rendering for multiple text segments that are not final answers.
 - Add a more robust parser fallback for unusual preview-model response layouts.
 
+## Session Entry
+
+### Date / Day
+- 2026-04-26 (Day 4)
+
+### Hours Spent
+- 1.5
+
+### What I Worked On
+- Added low-risk Tier 3 polish without changing the core request flow.
+- Added preset field-operations prompt template buttons to the frontend.
+- Added server-generated request IDs to `/ask` and `/ask-agentic` responses plus minimal server-side request logging.
+- Added request ID display in the frontend result area.
+
+### What I Got Stuck On
+- The main design choice was deciding how to add request IDs to errors without introducing a lot of custom infrastructure.
+
+### How I Got Unstuck
+- I kept the solution small by generating request IDs in FastAPI middleware and using lightweight exception handlers for safe JSON error responses.
+
+### What AI Helped With
+- Drafting the first pass of the request ID plumbing and helping keep the frontend additions small and readable.
+
+### How I Validated the Output
+- Ran the full test suite after changing the response shape.
+- Ran `python -m compileall app tests main.py`.
+- Manually checked that prompt buttons populate the textarea and that normal and agentic responses both surface request IDs.
+
+### Trade-Offs I Chose
+- I kept request logging minimal and avoided logging questions or image contents.
+- I did not add streaming or multi-turn chat because the exercise is easier to reason about and review as a stateless single-request app.
+- I kept the prompt templates as plain frontend buttons instead of adding any more elaborate preset management.
+
+### What I Would Do Differently With More Time
+- Add a tiny browser-based test harness for template button behavior.
+- Consider returning the request ID in a response header as well as JSON.
+- Add more structured log formatting if this moved beyond exercise scope.
+
 ## Session Template
 
 ### Date / Day
