@@ -12,6 +12,8 @@ services:
         value: production
       - key: MODEL_NAME
         value: gemini-2.5-flash
+      - key: AGENTIC_MODEL_NAME
+        value: gemini-3-flash-preview
       - key: MAX_UPLOAD_SIZE_BYTES
         value: 5242880
       - key: REQUEST_TIMEOUT_SECONDS

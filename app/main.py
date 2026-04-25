@@ -20,12 +20,31 @@ class AskResponse(BaseModel):
     model: str | None
 
 
+class AgenticTimelineItem(BaseModel):
+    type: str
+    content: str | None = None
+    language: str | None = None
+    code: str | None = None
+    output: str | None = None
+    outcome: str | None = None
+    mime_type: str | None = None
+    data: str | None = None
+
+
+class AskAgenticResponse(BaseModel):
+    answer: str
+    model: str
+    mode: str
+    timeline: list[AgenticTimelineItem]
+
+
 @lru_cache
 def get_gemini_service() -> GeminiService:
     settings = get_settings()
     return GeminiService(
         api_key=settings.gemini_api_key,
         model_name=settings.model_name,
+        agentic_model_name=settings.agentic_model_name,
         timeout_seconds=settings.request_timeout_seconds,
     )
 
@@ -50,6 +69,40 @@ async def ask_image_question(
     image: Annotated[UploadFile | None, File()] = None,
     question: Annotated[str | None, Form()] = None,
 ) -> AskResponse:
+    result = await _handle_question_request(
+        image=image,
+        question=question,
+        agentic=False,
+    )
+    return AskResponse(answer=result["answer"], model=result["model"])
+
+
+@app.post("/ask-agentic", response_model=AskAgenticResponse)
+async def ask_image_question_agentic(
+    image: Annotated[UploadFile | None, File()] = None,
+    question: Annotated[str | None, Form()] = None,
+) -> AskAgenticResponse:
+    result = await _handle_question_request(
+        image=image,
+        question=question,
+        agentic=True,
+    )
+    return AskAgenticResponse(
+        answer=result["answer"],
+        model=result["model"],
+        mode=result["mode"],
+        timeline=[
+            AgenticTimelineItem(**timeline_item) for timeline_item in result["timeline"]
+        ],
+    )
+
+
+async def _handle_question_request(
+    *,
+    image: UploadFile | None,
+    question: str | None,
+    agentic: bool,
+) -> dict:
     settings = get_settings()
     gemini_service = get_gemini_service()
     cleaned_question = validate_question(question)
@@ -59,11 +112,18 @@ async def ask_image_question(
             image=image,
             max_upload_size_bytes=settings.max_upload_size_bytes,
         )
-        result = await gemini_service.answer_question_about_image(
-            image_bytes=image_bytes,
-            image_content_type=image.content_type or "application/octet-stream",
-            question=cleaned_question,
-        )
+        if agentic:
+            result = await gemini_service.answer_question_about_image_agentic(
+                image_bytes=image_bytes,
+                image_content_type=image.content_type or "application/octet-stream",
+                question=cleaned_question,
+            )
+        else:
+            result = await gemini_service.answer_question_about_image(
+                image_bytes=image_bytes,
+                image_content_type=image.content_type or "application/octet-stream",
+                question=cleaned_question,
+            )
     except HTTPException:
         raise
     except GeminiServiceError as exc:
@@ -72,4 +132,4 @@ async def ask_image_question(
         if image is not None:
             await image.close()
 
-    return AskResponse(answer=result["answer"], model=result["model"])
+    return result
