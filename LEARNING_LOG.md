@@ -39,6 +39,44 @@ Use one entry per work session. Keep it honest, short, and specific enough to di
 - Add better production logging around failed Gemini requests.
 - Add stronger file-content validation beyond trusting the content type header.
 
+## Session Entry
+
+### Date / Day
+- 2026-04-26 (Day 3)
+
+### Hours Spent
+- 3.0
+
+### What I Worked On
+- Added a separate `/ask-agentic` endpoint so Tier 2 could be implemented without changing the stable `/ask` Tier 1 path.
+- Implemented Gemini 3 Flash Preview with Code Execution and a simple parser for thought summaries, executable code, execution results, and intermediate images.
+- Updated the vanilla frontend to add an Agentic Vision toggle and render a Think -> Act -> Observe timeline.
+
+### What I Got Stuck On
+- The main difficulty was making the Gemini response parsing simple enough to explain while still handling mixed response parts in a useful order.
+
+### How I Got Unstuck
+- I checked the official Gemini code execution and thinking docs, then inspected the SDK response types locally before writing the parser.
+
+### What AI Helped With
+- Drafting the first pass of the timeline rendering and helping think through how to keep Tier 2 isolated from the MVP path.
+
+### How I Validated the Output
+- Ran the existing test suite plus new `/ask-agentic` and parser-focused tests.
+- Ran `python -m compileall app tests`.
+- Manually verified that the frontend still points normal mode to `/ask` and agentic mode to `/ask-agentic`.
+- Checked that no frontend file contains the Gemini API key.
+
+### Trade-Offs I Chose
+- I isolated Tier 2 behind `/ask-agentic` instead of folding it into `/ask` to avoid breaking the required MVP.
+- I used the last meaningful non-thought text part as the final answer instead of building a more complex response ranking layer.
+- I kept the timeline schema flat and explicit so it would stay interview-friendly.
+
+### What I Would Do Differently With More Time
+- Add a live end-to-end agentic smoke test behind an explicit opt-in environment flag.
+- Improve timeline rendering for multiple text segments that are not final answers.
+- Add a more robust parser fallback for unusual preview-model response layouts.
+
 ## Session Template
 
 ### Date / Day

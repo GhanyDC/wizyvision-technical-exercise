@@ -2,7 +2,7 @@
 
 Small stateless web app for an image question-answering exercise. A user uploads an image, asks a natural-language question about it, and the backend sends both to Gemini and returns the answer.
 
-Current status: Tier 1 is implemented. FastAPI serves a plain HTML/CSS/JavaScript frontend, `/health` is live, `/ask` accepts validated multipart form data, and Gemini is called server-side through the official Google Gen AI SDK.
+Current status: Tier 1 and Tier 2 are implemented. The stable `/ask` endpoint remains the Tier 1 MVP path, and `/ask-agentic` adds an optional Agentic Vision mode backed by Gemini 3 Flash Preview with code execution.
 
 ## Why This Stack
 
@@ -25,22 +25,27 @@ app/
     script.js
     style.css
 tests/
+  conftest.py
+  test_ask.py
+  test_ask_agentic.py
+  test_gemini_service.py
   test_health.py
 .env.example
 .gitignore
 LEARNING_LOG.md
 README.md
+main.py
 render.yaml
 requirements.txt
 ```
 
 ## Architecture Summary
 
-- `app/main.py` wires the FastAPI app, static file serving, and the two HTTP endpoints.
-- `app/validators.py` handles request validation that should stay outside the route body.
-- `app/gemini_service.py` contains the only Gemini-specific code and keeps the API key server-side.
+- `app/main.py` wires the FastAPI app, static file serving, and the HTTP endpoints.
+- `app/validators.py` handles shared request validation.
+- `app/gemini_service.py` contains both the stable Tier 1 Gemini call and the isolated Tier 2 agentic parser.
 - `app/config.py` centralizes environment-based configuration.
-- `app/static/` contains a single-page frontend that posts multipart form data to `/ask`.
+- `app/static/` contains a single-page frontend that can switch between `/ask` and `/ask-agentic`.
 
 ## Gemini API Setup
 
@@ -49,7 +54,9 @@ requirements.txt
 3. Set `GEMINI_API_KEY` in `.env`.
 4. Keep the key server-side only. The browser never receives it.
 
-Current default model: `gemini-2.5-flash`
+Current default models:
+- Tier 1: `gemini-2.5-flash`
+- Tier 2 Agentic Vision: `gemini-3-flash-preview`
 
 The app sends Gemini requests from the backend only. There is no Gemini SDK code in the frontend and no API key is exposed to the browser.
 
@@ -95,24 +102,19 @@ python -m uvicorn main:app --reload --port 8010
 - `APP_NAME`: display name for the FastAPI app.
 - `APP_ENVIRONMENT`: environment label such as `development` or `production`.
 - `GEMINI_API_KEY`: Gemini API key. Keep this server-side only.
-- `MODEL_NAME`: Gemini model name. Default is `gemini-2.5-flash`.
+- `MODEL_NAME`: Tier 1 model name. Default is `gemini-2.5-flash`.
+- `AGENTIC_MODEL_NAME`: Tier 2 agentic model. Default is `gemini-3-flash-preview`.
 - `MAX_UPLOAD_SIZE_BYTES`: backend upload limit. Default is `5242880` for 5 MB.
 - `REQUEST_TIMEOUT_SECONDS`: timeout for Gemini API calls.
 
-## Current API Surface
+## API Surface
 
 - `GET /health`
   - Returns `{"status": "ok"}`
 - `POST /ask`
-  - Accepts multipart form data with:
-    - `image`
-    - `question`
-  - Validates:
-    - image exists
-    - image is one of `image/jpeg`, `image/png`, `image/webp`
-    - image is not empty
-    - image stays within the configured size limit
-    - question exists and is not blank
+  - Stable Tier 1 endpoint.
+  - Accepts multipart form data with `image` and `question`.
+  - Validates supported image type, file presence, file size, and question content.
   - Calls Gemini server-side and returns:
 
     ```json
@@ -121,6 +123,36 @@ python -m uvicorn main:app --reload --port 8010
       "model": "gemini-2.5-flash"
     }
     ```
+
+- `POST /ask-agentic`
+  - Optional Tier 2 endpoint.
+  - Accepts the same multipart payload as `/ask`.
+  - Uses Gemini 3 Flash Preview with Code Execution enabled.
+  - Returns the final answer plus a timeline of any thought summaries, generated Python code, execution output, and intermediate images returned by Gemini.
+
+## Tier 2 Agentic Vision
+
+- Normal mode uses `/ask` and preserves the stable Tier 1 MVP behavior.
+- Agentic Vision uses `/ask-agentic` and keeps the more experimental Gemini 3 flow isolated from the required MVP path.
+- The backend enables Code Execution and requests thought summaries so the frontend can render a readable Think -> Act -> Observe timeline instead of one raw response blob.
+
+## How To Test
+
+Normal mode:
+- Start the app.
+- Leave `Use Agentic Vision mode` unchecked.
+- Upload a JPG, PNG, or WEBP image and submit a question.
+
+Agentic Vision mode:
+- Start the app.
+- Check `Use Agentic Vision mode`.
+- Upload a supported image and ask a question where zooming, counting, or inspection may help.
+- Confirm the UI shows:
+  - final answer
+  - timeline entries
+  - generated Python code when present
+  - execution output when present
+  - intermediate images when Gemini returns them
 
 ## Running Tests
 
@@ -134,7 +166,8 @@ pytest
 - Build command: `pip install -r requirements.txt`
 - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - Set `GEMINI_API_KEY` in Render as a secret environment variable.
-- Optionally override `MODEL_NAME` in Render if you want to switch models later without code changes.
+- `MODEL_NAME` controls the stable Tier 1 path.
+- `AGENTIC_MODEL_NAME` controls the Tier 2 agentic path.
 - The health check points at `/health`.
 
 ## Known Limitations
@@ -142,12 +175,14 @@ pytest
 - MIME type validation is based on the uploaded content type and does not inspect file signatures.
 - The app handles one image and one question at a time.
 - There is no rate limiting, request logging, or analytics yet.
-- Gemini responses are plain text only and not structured.
+- Agentic Vision depends on a preview model and may be less predictable than the Tier 1 path.
+- Not every agentic response will include code, execution output, or images.
+- The app uses Gemini thought summaries and tool output directly rather than a richer custom workflow engine.
 
-## Remaining Tier 2 Stretch Work
+## Future Work
 
 - Add drag-and-drop uploads and a small image preview.
 - Add stronger server-side file validation beyond MIME type headers.
 - Add structured logging for failed Gemini calls in production.
-- Add more `/ask` test coverage around missing fields and file read failures.
+- Add more agentic parsing coverage around unusual Gemini response shapes.
 - Add a clearer deployment checklist after the first public Render deploy.
