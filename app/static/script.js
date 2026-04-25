@@ -1,18 +1,54 @@
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const PROMPT_TEMPLATES = {
+  "serial-number":
+    "Read the equipment label or nameplate in the image. What serial number, model number, or product code is visible? Only answer with visible text and say if anything is unreadable.",
+  "count-items":
+    "Count the clearly visible items relevant to the image. Be precise and mention if any items are partially hidden or uncertain.",
+  "check-ppe":
+    "Check whether the visible worker is wearing required safety gear such as a hard hat, safety vest, gloves, or eye protection. Only answer based on visible evidence.",
+  "inspect-damage":
+    "Inspect the image for visible damage, missing parts, unsafe conditions, or anomalies. Be concise and mention only what can be seen.",
+};
+
+class RequestError extends Error {
+  constructor(message, requestId = null) {
+    super(message);
+    this.name = "RequestError";
+    this.requestId = requestId;
+  }
+}
 
 const form = document.querySelector("#ask-form");
 const imageInput = document.querySelector("#image");
 const questionInput = document.querySelector("#question");
 const agenticModeInput = document.querySelector("#agentic-mode");
+const templateButtons = document.querySelectorAll(".template-button");
 const submitButton = document.querySelector("#submit-button");
 const statusMessage = document.querySelector("#status-message");
 const errorMessage = document.querySelector("#error-message");
 const answerSection = document.querySelector("#answer-section");
 const answerText = document.querySelector("#answer-text");
 const modelText = document.querySelector("#model-text");
+const requestIdText = document.querySelector("#request-id-text");
 const timelineSection = document.querySelector("#timeline-section");
 const timelineList = document.querySelector("#timeline-list");
+
+templateButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const templateKey = button.dataset.templateKey;
+    const template = templateKey ? PROMPT_TEMPLATES[templateKey] : "";
+
+    if (!template) {
+      return;
+    }
+
+    clearMessages();
+    questionInput.value = template;
+    questionInput.focus();
+    questionInput.setSelectionRange(template.length, template.length);
+  });
+});
 
 imageInput.addEventListener("change", () => {
   clearMessages();
@@ -64,6 +100,7 @@ form.addEventListener("submit", async (event) => {
   const formData = new FormData();
   formData.append("image", file);
   formData.append("question", question);
+
   const isAgenticMode = agenticModeInput.checked;
   const endpoint = isAgenticMode ? "/ask-agentic" : "/ask";
 
@@ -78,7 +115,8 @@ form.addEventListener("submit", async (event) => {
     const payload = await readJsonSafely(response);
 
     if (!response.ok) {
-      throw new Error(extractErrorMessage(payload));
+      const errorPayload = extractErrorMessage(payload);
+      throw new RequestError(errorPayload.message, errorPayload.requestId);
     }
 
     renderResponse(payload);
@@ -88,6 +126,12 @@ form.addEventListener("submit", async (event) => {
         : "Request completed.";
   } catch (error) {
     statusMessage.textContent = "";
+
+    if (error instanceof RequestError) {
+      showError(error.message, error.requestId);
+      return;
+    }
+
     const message =
       error instanceof Error
         ? error.message
@@ -106,19 +150,24 @@ function clearMessages() {
   answerText.textContent = "";
   modelText.textContent = "";
   modelText.hidden = true;
+  requestIdText.textContent = "";
+  requestIdText.hidden = true;
   timelineSection.hidden = true;
   timelineList.replaceChildren();
 }
 
-function showError(message) {
+function showError(message, requestId = null) {
   errorMessage.hidden = false;
-  errorMessage.textContent = message;
+  errorMessage.textContent = requestId ? `${message} Request ID: ${requestId}` : message;
 }
 
 function setLoadingState(isLoading) {
   imageInput.disabled = isLoading;
   questionInput.disabled = isLoading;
   agenticModeInput.disabled = isLoading;
+  templateButtons.forEach((button) => {
+    button.disabled = isLoading;
+  });
   submitButton.disabled = isLoading;
   submitButton.textContent = isLoading ? "Asking..." : "Ask";
 
@@ -129,20 +178,33 @@ function setLoadingState(isLoading) {
 
 function extractErrorMessage(payload) {
   if (!payload || typeof payload !== "object") {
-    return "Something went wrong. Please try again.";
+    return {
+      message: "Something went wrong. Please try again.",
+      requestId: null,
+    };
   }
 
   const detail = payload.detail;
+  const requestId =
+    typeof payload.request_id === "string" && payload.request_id.trim()
+      ? payload.request_id
+      : null;
 
   if (typeof detail === "string" && detail.trim()) {
-    return detail;
+    return { message: detail, requestId };
   }
 
   if (Array.isArray(detail) && detail.length > 0) {
-    return "The request was rejected. Please check the form fields and try again.";
+    return {
+      message: "The request was rejected. Please check the form fields and try again.",
+      requestId,
+    };
   }
 
-  return "Something went wrong. Please try again.";
+  return {
+    message: "Something went wrong. Please try again.",
+    requestId,
+  };
 }
 
 async function readJsonSafely(response) {
@@ -176,6 +238,14 @@ function renderResponse(payload) {
   } else {
     modelText.textContent = "";
     modelText.hidden = true;
+  }
+
+  if (payload.request_id) {
+    requestIdText.textContent = `Request ID: ${payload.request_id}`;
+    requestIdText.hidden = false;
+  } else {
+    requestIdText.textContent = "";
+    requestIdText.hidden = true;
   }
 
   answerSection.hidden = false;

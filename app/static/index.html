@@ -39,13 +39,47 @@
             ></textarea>
           </div>
 
+          <div class="field">
+            <p class="template-label">Prompt templates</p>
+            <div class="template-list">
+              <button
+                class="template-button"
+                type="button"
+                data-template-key="serial-number"
+              >
+                Read serial number
+              </button>
+              <button
+                class="template-button"
+                type="button"
+                data-template-key="count-items"
+              >
+                Count visible items
+              </button>
+              <button
+                class="template-button"
+                type="button"
+                data-template-key="check-ppe"
+              >
+                Check PPE / safety gear
+              </button>
+              <button
+                class="template-button"
+                type="button"
+                data-template-key="inspect-damage"
+              >
+                Inspect visible damage
+              </button>
+            </div>
+          </div>
+
           <label class="toggle-row" for="agentic-mode">
             <input id="agentic-mode" name="agentic-mode" type="checkbox" />
             <span>
               <strong>Use Agentic Vision mode</strong>
               <span class="toggle-hint"
                 >Uses Gemini 3 Flash Preview with code execution and a visible
-                Think → Act → Observe timeline.</span
+                Think -&gt; Act -&gt; Observe timeline.</span
               >
             </span>
           </label>
@@ -60,6 +94,7 @@
           <h2>Answer</h2>
           <p id="answer-text"></p>
           <p id="model-text" class="hint" hidden></p>
+          <p id="request-id-text" class="hint" hidden></p>
         </section>
 
         <section id="timeline-section" class="timeline" hidden>

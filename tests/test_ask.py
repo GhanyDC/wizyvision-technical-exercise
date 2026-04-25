@@ -39,6 +39,7 @@ class FailingGeminiService:
 
 
 def test_ask_returns_answer_from_gemini_service(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test1001")
     monkeypatch.setattr(main, "get_gemini_service", lambda: SuccessfulGeminiService())
 
     response = client.post(
@@ -51,10 +52,12 @@ def test_ask_returns_answer_from_gemini_service(monkeypatch) -> None:
     assert response.json() == {
         "answer": "The label appears to say AX-2048.",
         "model": "gemini-2.5-flash",
+        "request_id": "req_test1001",
     }
 
 
 def test_ask_rejects_blank_question(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test1002")
     monkeypatch.setattr(main, "get_gemini_service", lambda: SuccessfulGeminiService())
 
     response = client.post(
@@ -64,10 +67,14 @@ def test_ask_rejects_blank_question(monkeypatch) -> None:
     )
 
     assert response.status_code == 422
-    assert response.json() == {"detail": "Question must not be empty."}
+    assert response.json() == {
+        "detail": "Question must not be empty.",
+        "request_id": "req_test1002",
+    }
 
 
 def test_ask_rejects_unsupported_image_type(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test1003")
     monkeypatch.setattr(main, "get_gemini_service", lambda: SuccessfulGeminiService())
 
     response = client.post(
@@ -78,11 +85,13 @@ def test_ask_rejects_unsupported_image_type(monkeypatch) -> None:
 
     assert response.status_code == 415
     assert response.json() == {
-        "detail": "Only JPEG, PNG, and WEBP images are supported."
+        "detail": "Only JPEG, PNG, and WEBP images are supported.",
+        "request_id": "req_test1003",
     }
 
 
 def test_ask_rejects_large_images(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test1004")
     monkeypatch.setattr(main, "get_gemini_service", lambda: SuccessfulGeminiService())
 
     oversized_bytes = b"a" * ((5 * 1024 * 1024) + 1)
@@ -93,10 +102,14 @@ def test_ask_rejects_large_images(monkeypatch) -> None:
     )
 
     assert response.status_code == 413
-    assert response.json() == {"detail": "Image must be 5 MB or smaller."}
+    assert response.json() == {
+        "detail": "Image must be 5 MB or smaller.",
+        "request_id": "req_test1004",
+    }
 
 
 def test_ask_returns_safe_gemini_errors(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test1005")
     monkeypatch.setattr(main, "get_gemini_service", lambda: FailingGeminiService())
 
     response = client.post(
@@ -107,5 +120,6 @@ def test_ask_returns_safe_gemini_errors(monkeypatch) -> None:
 
     assert response.status_code == 503
     assert response.json() == {
-        "detail": "Gemini is temporarily unavailable. Please try again."
+        "detail": "Gemini is temporarily unavailable. Please try again.",
+        "request_id": "req_test1005",
     }
