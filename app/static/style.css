@@ -81,6 +81,27 @@ h1 {
   gap: 8px;
 }
 
+.toggle-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid #c6cfdd;
+  border-radius: 12px;
+  background: #fbfcff;
+}
+
+.toggle-row input {
+  margin-top: 3px;
+}
+
+.toggle-hint {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
 label {
   font-weight: 600;
 }
@@ -139,7 +160,8 @@ button:disabled {
 }
 
 .message,
-.answer {
+.answer,
+.timeline {
   margin-top: 20px;
   border-radius: 14px;
   padding: 16px 18px;
@@ -156,9 +178,58 @@ button:disabled {
   background: var(--answer-bg);
 }
 
+.timeline {
+  border: 1px solid #d9e1ef;
+  background: #ffffff;
+}
+
 .answer p:last-child,
 .answer h2 + p {
   margin-bottom: 0;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.timeline-item {
+  padding: 14px;
+  border: 1px solid #dfe5f1;
+  border-radius: 12px;
+  background: #f9fbff;
+}
+
+.timeline-label,
+.timeline-meta {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #264181;
+}
+
+.timeline-text {
+  margin: 0;
+}
+
+.timeline-item pre {
+  margin: 0;
+  overflow-x: auto;
+  border-radius: 10px;
+  padding: 12px;
+  background: #162033;
+  color: #eef3ff;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.timeline-image {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #d2daea;
+  background: #ffffff;
 }
 
 @media (max-width: 640px) {
@@ -169,5 +240,9 @@ button:disabled {
   .panel {
     padding: 24px 18px;
     border-radius: 16px;
+  }
+
+  .toggle-row {
+    padding: 12px;
   }
 }

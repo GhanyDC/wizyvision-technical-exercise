@@ -12,9 +12,9 @@
         <p class="eyebrow">Image Q&amp;A</p>
         <h1>Ask a question about an uploaded image.</h1>
         <p class="intro">
-          This starter app accepts one image and one natural-language question,
-          then sends both to the backend. Gemini integration is intentionally
-          stubbed for now.
+          Upload one image, ask one question, and choose between the stable Tier
+          1 flow or the optional Agentic Vision mode that can show code-driven
+          inspection steps.
         </p>
 
         <form id="ask-form" class="form" novalidate>
@@ -39,6 +39,17 @@
             ></textarea>
           </div>
 
+          <label class="toggle-row" for="agentic-mode">
+            <input id="agentic-mode" name="agentic-mode" type="checkbox" />
+            <span>
+              <strong>Use Agentic Vision mode</strong>
+              <span class="toggle-hint"
+                >Uses Gemini 3 Flash Preview with code execution and a visible
+                Think → Act → Observe timeline.</span
+              >
+            </span>
+          </label>
+
           <button id="submit-button" type="submit">Ask</button>
         </form>
 
@@ -49,6 +60,11 @@
           <h2>Answer</h2>
           <p id="answer-text"></p>
           <p id="model-text" class="hint" hidden></p>
+        </section>
+
+        <section id="timeline-section" class="timeline" hidden>
+          <h2>Timeline</h2>
+          <div id="timeline-list" class="timeline-list"></div>
         </section>
       </section>
     </main>
