@@ -1,4 +1,5 @@
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const form = document.querySelector("#ask-form");
 const imageInput = document.querySelector("#image");
@@ -18,6 +19,12 @@ imageInput.addEventListener("change", () => {
     return;
   }
 
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    showError("Please choose a JPG, PNG, or WEBP image.");
+    imageInput.value = "";
+    return;
+  }
+
   if (file.size > MAX_FILE_SIZE_BYTES) {
     showError("Please choose an image that is 5 MB or smaller.");
     imageInput.value = "";
@@ -33,6 +40,11 @@ form.addEventListener("submit", async (event) => {
 
   if (!file) {
     showError("Please select an image before submitting.");
+    return;
+  }
+
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    showError("Please choose a JPG, PNG, or WEBP image.");
     return;
   }
 
@@ -58,7 +70,7 @@ form.addEventListener("submit", async (event) => {
       body: formData,
     });
 
-    const payload = await response.json();
+    const payload = await readJsonSafely(response);
 
     if (!response.ok) {
       throw new Error(extractErrorMessage(payload));
@@ -130,4 +142,18 @@ function extractErrorMessage(payload) {
   }
 
   return "Something went wrong. Please try again.";
+}
+
+async function readJsonSafely(response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    return null;
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
 }
