@@ -79,10 +79,16 @@ Python version: `3.12`
 4. Start the app:
 
    ```bash
-   uvicorn app.main:app --reload
+   python -m uvicorn main:app --reload
    ```
 
 5. Open `http://127.0.0.1:8000`.
+
+If port `8000` is already in use, start on another port:
+
+```bash
+python -m uvicorn main:app --reload --port 8010
+```
 
 ## Environment Variables
 
