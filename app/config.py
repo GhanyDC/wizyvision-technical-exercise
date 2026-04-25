@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     app_name: str = Field(default="WizyVision Technical Exercise", alias="APP_NAME")
     environment: str = Field(default="development", alias="APP_ENVIRONMENT")
     gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
+    model_name: str = Field(default="gemini-2.5-flash", alias="MODEL_NAME")
     max_upload_size_bytes: int = Field(
         default=5 * 1024 * 1024,
         alias="MAX_UPLOAD_SIZE_BYTES",

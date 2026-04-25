@@ -6,8 +6,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.config import STATIC_DIR, Settings, get_settings
-from app.gemini_service import GeminiService
+from app.config import STATIC_DIR, get_settings
+from app.gemini_service import GeminiService, GeminiServiceError
 from app.validators import read_and_validate_image, validate_question
 
 
@@ -25,6 +25,7 @@ def get_gemini_service() -> GeminiService:
     settings = get_settings()
     return GeminiService(
         api_key=settings.gemini_api_key,
+        model_name=settings.model_name,
         timeout_seconds=settings.request_timeout_seconds,
     )
 
@@ -46,8 +47,8 @@ async def health_check() -> HealthResponse:
 
 @app.post("/ask", response_model=AskResponse)
 async def ask_image_question(
-    image: Annotated[UploadFile, File(...)],
-    question: Annotated[str, Form(...)],
+    image: Annotated[UploadFile | None, File()] = None,
+    question: Annotated[str | None, Form()] = None,
 ) -> AskResponse:
     settings = get_settings()
     gemini_service = get_gemini_service()
@@ -65,7 +66,10 @@ async def ask_image_question(
         )
     except HTTPException:
         raise
+    except GeminiServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
     finally:
-        await image.close()
+        if image is not None:
+            await image.close()
 
     return AskResponse(answer=result["answer"], model=result["model"])
