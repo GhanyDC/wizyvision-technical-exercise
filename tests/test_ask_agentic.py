@@ -56,6 +56,7 @@ class FailingAgenticGeminiService:
 
 
 def test_ask_agentic_returns_timeline(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test2001")
     monkeypatch.setattr(
         main,
         "get_gemini_service",
@@ -73,6 +74,7 @@ def test_ask_agentic_returns_timeline(monkeypatch) -> None:
         "answer": "There are 3 visible pedals.",
         "model": "gemini-3-flash-preview",
         "mode": "agentic",
+        "request_id": "req_test2001",
         "timeline": [
             {
                 "type": "think",
@@ -105,10 +107,11 @@ def test_ask_agentic_returns_timeline(monkeypatch) -> None:
                 "data": None,
             },
         ],
-    }
+}
 
 
 def test_ask_agentic_rejects_blank_question(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test2002")
     monkeypatch.setattr(
         main,
         "get_gemini_service",
@@ -122,10 +125,14 @@ def test_ask_agentic_rejects_blank_question(monkeypatch) -> None:
     )
 
     assert response.status_code == 422
-    assert response.json() == {"detail": "Question must not be empty."}
+    assert response.json() == {
+        "detail": "Question must not be empty.",
+        "request_id": "req_test2002",
+    }
 
 
 def test_ask_agentic_rejects_unsupported_image_type(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test2003")
     monkeypatch.setattr(
         main,
         "get_gemini_service",
@@ -140,11 +147,13 @@ def test_ask_agentic_rejects_unsupported_image_type(monkeypatch) -> None:
 
     assert response.status_code == 415
     assert response.json() == {
-        "detail": "Only JPEG, PNG, and WEBP images are supported."
+        "detail": "Only JPEG, PNG, and WEBP images are supported.",
+        "request_id": "req_test2003",
     }
 
 
 def test_ask_agentic_rejects_large_images(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test2004")
     monkeypatch.setattr(
         main,
         "get_gemini_service",
@@ -159,10 +168,14 @@ def test_ask_agentic_rejects_large_images(monkeypatch) -> None:
     )
 
     assert response.status_code == 413
-    assert response.json() == {"detail": "Image must be 5 MB or smaller."}
+    assert response.json() == {
+        "detail": "Image must be 5 MB or smaller.",
+        "request_id": "req_test2004",
+    }
 
 
 def test_ask_agentic_returns_safe_gemini_errors(monkeypatch) -> None:
+    monkeypatch.setattr(main, "generate_request_id", lambda: "req_test2005")
     monkeypatch.setattr(
         main,
         "get_gemini_service",
@@ -177,5 +190,6 @@ def test_ask_agentic_returns_safe_gemini_errors(monkeypatch) -> None:
 
     assert response.status_code == 503
     assert response.json() == {
-        "detail": "Gemini is temporarily unavailable. Please try again."
+        "detail": "Gemini is temporarily unavailable. Please try again.",
+        "request_id": "req_test2005",
     }
